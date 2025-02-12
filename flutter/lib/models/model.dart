@@ -2653,6 +2653,7 @@ class FFI {
   void start(
     String id, {
     bool isFileTransfer = false,
+    bool isViewCamera = false,
     bool isPortForward = false,
     bool isRdp = false,
     String? switchUuid,
@@ -2667,9 +2668,14 @@ class FFI {
     closed = false;
     auditNote = '';
     if (isMobile) mobileReset();
-    assert(!(isFileTransfer && isPortForward), 'more than one connect type');
+    assert((!(isPortForward && isViewCamera) 
+      && (!(isViewCamera && isPortForward)) 
+      && (!(isPortForward && isFileTransfer)), 
+      'more than one connect type');
     if (isFileTransfer) {
       connType = ConnType.fileTransfer;
+    } else if (isViewCamera) { 
+      connType = ConnType.viewCamera;
     } else if (isPortForward) {
       connType = ConnType.portForward;
     } else {
@@ -2689,6 +2695,7 @@ class FFI {
         sessionId: sessionId,
         id: id,
         isFileTransfer: isFileTransfer,
+        isViewCamera: isViewCamera,
         isPortForward: isPortForward,
         isRdp: isRdp,
         switchUuid: switchUuid ?? '',

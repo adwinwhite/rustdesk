@@ -283,6 +283,20 @@ impl Server {
         name.starts_with(video_service::NAME)
     }
 
+    pub fn try_add_primary_camera_service(&mut self) {
+        // FIXME: check whether camera exists.
+        // FIXME: use simpler method to get camera index.
+        // FIXME: handle the `unwrap()`.
+        let primary_camera_video_index = display_service::all_display_info_without_cameras().unwrap().len();
+        let primary_camera_service_name =
+            video_service::get_service_name(primary_camera_video_index);
+        if !self.contains(&primary_camera_service_name) {
+            self.add_service(Box::new(video_service::new(
+                primary_camera_video_index
+            )));
+        }
+    }
+
     pub fn try_add_primay_video_service(&mut self) {
         let primary_video_service_name =
             video_service::get_service_name(*display_service::PRIMARY_DISPLAY_IDX);

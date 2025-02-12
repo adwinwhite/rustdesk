@@ -299,9 +299,9 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   /// Callback for the connect button.
   /// Connects to the selected peer.
-  void onConnect({bool isFileTransfer = false}) {
+  void onConnect({bool isFileTransfer = false, bool isViewCamera = false}) {
     var id = _idController.id;
-    connect(context, id, isFileTransfer: isFileTransfer);
+    connect(context, id, isFileTransfer: isFileTransfer, isViewCamera: isViewCamera);
   }
 
   Future<void> _fetchPeers() async {
@@ -504,6 +504,11 @@ class _ConnectionPageState extends State<ConnectionPage>
                     isOutline: true,
                     onTap: () => onConnect(isFileTransfer: true),
                     text: "Transfer file",
+                  ),
+                  Button(
+                    isOutline: true,
+                    onTap: () => onConnect(isViewCamera: true),
+                    text: "View Camera",
                   ),
                   const SizedBox(
                     width: 17,

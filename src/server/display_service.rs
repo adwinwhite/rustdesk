@@ -6,7 +6,7 @@ use crate::platform::linux::is_x11;
 use crate::virtual_display_manager;
 #[cfg(windows)]
 use hbb_common::get_version_number;
-use hbb_common::protobuf::MessageField;
+use hbb_common::{futures::future::join, protobuf::MessageField};
 use scrap::Display;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -203,7 +203,7 @@ fn check_get_displays_changed_msg() -> Option<Message> {
             return get_displays_msg();
         }
     }
-    check_update_displays(&try_get_displays().ok()?);
+    check_update_displays(all_display_info_with_cameras().ok()?);
     get_displays_msg()
 }
 
@@ -216,7 +216,7 @@ pub fn check_displays_changed() -> ResultType<()> {
             return Ok(());
         }
     }
-    check_update_displays(&try_get_displays()?);
+    check_update_displays(all_display_info_with_cameras()?);
     Ok(())
 }
 
@@ -302,41 +302,8 @@ pub(super) fn get_display_info(idx: usize) -> Option<DisplayInfo> {
 
 // Display to DisplayInfo
 // The DisplayInfo is be sent to the peer.
-pub(super) fn check_update_displays(all: &Vec<Display>) {
-    let displays = all
-        .iter()
-        .map(|d| {
-            let display_name = d.name();
-            #[allow(unused_assignments)]
-            #[allow(unused_mut)]
-            let mut scale = 1.0;
-            #[cfg(target_os = "macos")]
-            {
-                scale = d.scale();
-            }
-            let original_resolution = get_original_resolution(
-                &display_name,
-                ((d.width() as f64) / scale).round() as usize,
-                (d.height() as f64 / scale).round() as usize,
-            );
-            DisplayInfo {
-                x: d.origin().0 as _,
-                y: d.origin().1 as _,
-                width: d.width() as _,
-                height: d.height() as _,
-                name: display_name,
-                online: d.is_online(),
-                cursor_embedded: false,
-                original_resolution,
-                scale,
-                ..Default::default()
-            }
-        })
-        .collect::<Vec<DisplayInfo>>();
-    match camera_display::Cameras::all(&displays){
-        Ok(all_displays) => SYNC_DISPLAYS.lock().unwrap().check_changed(all_displays),
-        Err(_) => SYNC_DISPLAYS.lock().unwrap().check_changed(displays),
-    }
+pub(super) fn check_update_displays(all: Vec<DisplayInfo>) {
+    SYNC_DISPLAYS.lock().unwrap().check_changed(all);
 }
 
 pub fn is_inited_msg() -> Option<Message> {
@@ -354,11 +321,16 @@ pub async fn update_get_sync_displays_on_login() -> ResultType<Vec<DisplayInfo>>
             return super::wayland::get_displays().await;
         }
     }
-    #[cfg(not(windows))]
-    let displays = display_service::try_get_displays();
-    #[cfg(windows)]
-    let displays = display_service::try_get_displays_add_amyuni_headless();
-    check_update_displays(&displays?);
+    cfg_if::cfg_if!{
+        if #[cfg(not(windows))] {
+            let display_info = all_display_info_with_cameras()?;
+        } else {
+            let displays = display_service::try_get_displays_add_amyuni_headless()?;
+            let mut display_info = displays.iter().map(display_to_info).collect();
+            join(display_info, camera_display::Cameras::all_info()?);
+        }
+    };
+    check_update_displays(display_info);
     Ok(SYNC_DISPLAYS.lock().unwrap().displays.clone())
 }
 
@@ -405,6 +377,67 @@ fn no_displays(displays: &Vec<Display>) -> bool {
     } else {
         false
     }
+}
+
+pub fn display_to_info(d: &Display) -> DisplayInfo {
+    let display_name = d.name();
+    #[allow(unused_assignments)]
+    #[allow(unused_mut)]
+    let mut scale = 1.0;
+    #[cfg(target_os = "macos")]
+    {
+        scale = d.scale();
+    }
+    let original_resolution = get_original_resolution(
+        &display_name,
+        ((d.width() as f64) / scale).round() as usize,
+        (d.height() as f64 / scale).round() as usize,
+    );
+    DisplayInfo {
+        x: d.origin().0 as _,
+        y: d.origin().1 as _,
+        width: d.width() as _,
+        height: d.height() as _,
+        name: display_name,
+        online: d.is_online(),
+        cursor_embedded: false,
+        original_resolution,
+        scale,
+        ..Default::default()
+    }
+}
+
+fn join_display_info(
+    first: &mut Vec<DisplayInfo>,
+    second: Vec<DisplayInfo>,
+) {
+    let (mut x, y) = first.last().map(|last| (last.x + last.width, last.y)).unwrap_or((0, 0));
+    for info in second {
+        first.push(DisplayInfo {
+            x,
+            y,
+            ..info
+        });
+        x += info.width;
+    }
+}
+
+
+fn all_display_info(include_camera: bool) -> ResultType<Vec<DisplayInfo>> {
+    let mut info = try_get_displays()?.iter().map(display_to_info).collect::<Vec<DisplayInfo>>();
+    if include_camera {
+        let cameras_info = camera_display::Cameras::all_info()?;
+        join_display_info(&mut info, cameras_info);
+    }
+    Ok(info)
+}
+
+pub fn all_display_info_with_cameras() -> ResultType<Vec<DisplayInfo>> {
+    all_display_info(true)
+}
+
+pub fn all_display_info_without_cameras() -> ResultType<Vec<DisplayInfo>> {
+    all_display_info(false)
 }
 
 #[inline]

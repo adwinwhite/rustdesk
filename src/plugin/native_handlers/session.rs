@@ -121,6 +121,7 @@ impl PluginNativeHandler for PluginNativeSessionHandler {
 
 impl PluginNativeSessionHandler {
     fn create_session(&self, session_id: String) -> String {
+        // FIXME: Looks like that it has wrong number of arguments.
         let session =
             crate::flutter::session_add(&session_id, false, false, false, "", false, "".to_owned());
         if let Ok(session) = session {

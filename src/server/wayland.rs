@@ -1,4 +1,5 @@
 use super::*;
+use display_service::{all_display_info_without_cameras, display_to_info};
 use hbb_common::{allow_err, platform::linux::DISTRO};
 use scrap::{is_cursor_embedded, set_map_err, Capturer, Display, Frame, TraitCapturer};
 use std::io;
@@ -138,7 +139,8 @@ pub(super) async fn check_init() -> ResultType<()> {
                 let num = all.len();
                 let primary = super::display_service::get_primary_2(&all);
                 let current = primary;
-                super::display_service::check_update_displays(&all);
+                let display_info: Vec<DisplayInfo> = all.iter().map(super::display_service::display_to_info).collect();
+                super::display_service::check_update_displays(display_info);
                 let mut displays = super::display_service::get_sync_displays();
                 for display in displays.iter_mut() {
                     display.cursor_embedded = is_cursor_embedded();

@@ -179,6 +179,7 @@ pub struct Connection {
     timer: crate::RustDeskInterval,
     file_timer: crate::RustDeskInterval,
     file_transfer: Option<(String, bool)>,
+    view_camera: bool,
     port_forward_socket: Option<Framed<TcpStream, BytesCodec>>,
     port_forward_address: String,
     tx_to_cm: mpsc::UnboundedSender<ipc::Data>,
@@ -249,6 +250,20 @@ impl ConnInner {
     }
 }
 
+fn is_message_i_care(msg: &Message) -> bool {
+    match &msg.union {
+        Some(message::Union::VideoFrame(_)) => false,
+        Some(message::Union::Misc(misc)) => match &misc.union {
+            Some(misc::Union::SwitchDisplay(_)) => false,
+            _ => true,
+        },
+        Some(message::Union::MultiClipboards(_)) => false,
+        Some(message::Union::TestDelay(_)) => false,
+        Some(message::Union::KeyEvent(_)) => false,
+        _ => true,
+    }
+}
+
 impl Subscriber for ConnInner {
     #[inline]
     fn id(&self) -> i32 {
@@ -267,6 +282,7 @@ impl Subscriber for ConnInner {
             _ => false,
         };
         let tx = if tx_by_video {
+            log::debug!("sending video message");
             self.tx_video.as_mut()
         } else {
             self.tx.as_mut()
@@ -331,6 +347,7 @@ impl Connection {
             timer: crate::rustdesk_interval(time::interval(SEC30)),
             file_timer: crate::rustdesk_interval(time::interval(SEC30)),
             file_transfer: None,
+            view_camera: false,
             port_forward_socket: None,
             port_forward_address: "".to_owned(),
             tx_to_cm,
@@ -1412,6 +1429,10 @@ impl Connection {
             } else {
                 self.delayed_read_dir = Some((dir.to_owned(), show_hidden));
             }
+        } else if self.view_camera {
+            if !wait_session_id_confirm {
+                self.try_sub_camera_services();
+            }
         } else if sub_service {
             if !wait_session_id_confirm {
                 self.try_sub_services();
@@ -1419,6 +1440,17 @@ impl Connection {
         }
     }
 
+    fn try_sub_camera_services(&mut self) {
+        if let Some(s) = self.server.upgrade() {
+            let mut s = s.write().unwrap();
+            self.auto_disconnect_timer = Self::get_auto_disconenct_timer();
+            s.try_add_primary_camera_service();
+            // TODO: add microphone service.
+            // s.add_connection(self.inner.clone(), &noperms);
+        }
+    }
+
+    // FIXME: rename to remove camera services.
     fn try_sub_services(&mut self) {
         let is_remote = self.file_transfer.is_none() && self.port_forward_socket.is_none();
         if is_remote && !self.services_subed {
@@ -1764,6 +1796,9 @@ impl Connection {
     }
 
     async fn on_message(&mut self, msg: Message) -> bool {
+        if is_message_i_care(&msg) {
+            log::debug!("received Message: {:?}", msg);
+        }
         if let Some(message::Union::LoginRequest(lr)) = msg.union {
             self.handle_login_request_without_validation(&lr).await;
             if self.authorized {
@@ -1778,6 +1813,15 @@ impl Connection {
                         return false;
                     }
                     self.file_transfer = Some((ft.dir, ft.show_hidden));
+                }
+                Some(login_request::Union::ViewCamera(vc)) => {
+                    if !Connection::permission(keys::OPTION_ENABLE_CAMERA) {
+                        self.send_login_error("No permission of viewing camera")
+                            .await;
+                        sleep(1.).await;
+                        return false;
+                    }
+                    self.view_camera = true;
                 }
                 Some(login_request::Union::PortForward(mut pf)) => {
                     if !Connection::permission("enable-tunnel") {
@@ -3276,6 +3320,9 @@ impl Connection {
 
     #[inline]
     async fn send(&mut self, msg: Message) {
+        if is_message_i_care(&msg) {
+            log::debug!("sent Message: {:?}", msg);
+        }
         allow_err!(self.stream.send(&msg).await);
     }
 
