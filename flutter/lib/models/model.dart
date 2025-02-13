@@ -9,7 +9,6 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_hbb/common/widgets/peers_view.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/ab_model.dart';
@@ -1946,7 +1945,7 @@ class CursorModel with ChangeNotifier {
   double _displayOriginY = 0;
   DateTime? _firstUpdateMouseTime;
   Rect? _windowRect;
-  List<RemoteWindowCoords> _remoteWindowCoords = [];
+  final List<RemoteWindowCoords> _remoteWindowCoords = [];
   bool gotMouseControl = true;
   DateTime _lastPeerMouse = DateTime.now()
       .subtract(Duration(milliseconds: 3000 * kMouseControlTimeoutMSec));
@@ -2668,7 +2667,7 @@ class FFI {
     closed = false;
     auditNote = '';
     if (isMobile) mobileReset();
-    assert((!(isPortForward && isViewCamera) 
+    assert((!(isPortForward && isViewCamera)) 
       && (!(isViewCamera && isPortForward)) 
       && (!(isPortForward && isFileTransfer)), 
       'more than one connect type');

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/platform_model.dart';
 export 'package:http/http.dart' show Response;
@@ -66,9 +65,6 @@ class HttpService {
     String? responseJson = " ";
     while (responseJson == " ") {
       responseJson = await bind.mainGetHttpStatus(url: url);
-      if (responseJson == null) {
-        throw Exception('The HTTP request failed');
-      }
       if (responseJson == " ") {
         await Future.delayed(const Duration(milliseconds: 100));
       }
