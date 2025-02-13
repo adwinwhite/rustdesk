@@ -11,7 +11,7 @@ import 'package:flutter_hbb/models/input_model.dart';
 
 /// must keep the order
 // ignore: constant_identifier_names
-enum WindowType { Main, RemoteDesktop, FileTransfer, PortForward, Unknown }
+enum WindowType { Main, RemoteDesktop, FileTransfer, ViewCamera, PortForward, Unknown }
 
 extension Index on int {
   WindowType get windowType {

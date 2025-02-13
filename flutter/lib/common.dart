@@ -28,9 +28,11 @@ import 'package:window_size/window_size.dart' as window_size;
 import '../consts.dart';
 import 'common/widgets/overlay.dart';
 import 'mobile/pages/file_manager_page.dart';
+// import 'mobile/pages/view_camera_page.dart';
 import 'mobile/pages/remote_page.dart';
 import 'desktop/pages/remote_page.dart' as desktop_remote;
 import 'desktop/pages/file_manager_page.dart' as desktop_file_manager;
+import 'desktop/pages/view_camera_page.dart' as desktop_view_camera;
 import 'package:flutter_hbb/desktop/widgets/remote_toolbar.dart';
 import 'models/model.dart';
 import 'models/platform_model.dart';
@@ -2405,11 +2407,12 @@ connect(BuildContext context, String id,
         );
       }
     } else if (isViewCamera) {
+      // TODO: add mobile page.
       if (isWeb) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (BuildContext context) => desktop_remote.ViewCameraPage(
+            builder: (BuildContext context) => desktop_view_camera.ViewCameraPage(
               key: ValueKey(id),
               id: id,
               toolbarState: ToolbarState(),
@@ -2419,15 +2422,7 @@ connect(BuildContext context, String id,
             ),
           ),
         );
-      } else {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (BuildContext context) => ViewCameraPage(
-                id: id, password: password, isSharedPassword: isSharedPassword),
-          ),
-        );
-      }
+      }     
     } else {
       if (isWeb) {
         Navigator.push(

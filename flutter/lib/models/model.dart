@@ -2573,7 +2573,7 @@ class ElevationModel with ChangeNotifier {
   onPortableServiceRunning(bool running) => _running = running;
 }
 
-enum ConnType { defaultConn, fileTransfer, portForward, rdp }
+enum ConnType { defaultConn, fileTransfer, portForward, rdp, viewCamera }
 
 /// Flutter state manager and data communication with the Rust core.
 class FFI {
