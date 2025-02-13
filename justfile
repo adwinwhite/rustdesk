@@ -5,6 +5,10 @@ build:
 build-lib:
     cargo build --features "flutter,linux-pkg-config" --ignore-rust-version --lib
 
+[no-cd]
+build-flutter:
+    docker run --rm -v .:/app -w /app instrumentisto/flutter:3.24.4 flutter build linux
+
 run $LD_RUN_PATH="$LD_LIBRARY_PATH" $RUSTDESK_FORCED_DISPLAY_SERVER="x11":
     ./target/debug/rustdesk
 
