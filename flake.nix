@@ -109,7 +109,15 @@
           # '';
           LD_LIBRARY_PATH = lib.concatStrings [
             "${libgcc}/lib/gcc/x86_64-unknown-linux-gnu/14.2.1:"
+            "/home/adwin/Code/rust/rustdesk-docker/target/debug:"
             (lib.makeLibraryPath (with pkgs; [
+              harfbuzz.out
+              at-spi2-atk.out
+              libdeflate
+              libepoxy
+              gdk-pixbuf
+              fontconfig.lib
+              libvmaf.out
               # libgcc
               # glibc
               # iconv.out
