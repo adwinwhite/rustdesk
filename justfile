@@ -7,7 +7,12 @@ build-lib:
 
 [no-cd]
 build-flutter:
-    docker run --rm -v .:/app -w /app instrumentisto/flutter:3.24.4 flutter build linux
+    docker run --rm -v /nix/store:/nix/store:ro -v /home/adwin/.pub-cache:/home/adwin/.pub-cache:ro -v .:/app -w /app instrumentisto/flutter:3.24.4 flutter build linux
+
+[no-cd]
+flutter *ARGS:
+    docker run --rm -v /nix/store:/nix/store:ro -v /home/adwin/.pub-cache:/home/adwin/.pub-cache:ro -v .:/app -w /app instrumentisto/flutter:3.24.4 flutter {{ARGS}} 
+
 
 run $LD_RUN_PATH="$LD_LIBRARY_PATH" $RUSTDESK_FORCED_DISPLAY_SERVER="x11":
     ./target/debug/rustdesk
