@@ -16,7 +16,9 @@
       with pkgs;
       {
         devShell = mkShell {
+          nativeBuildInputs = [ pkg-config ];
           buildInputs = with pkgs; [
+            nasm
             cargo-expand
             mold
             just
@@ -31,7 +33,7 @@
             gtk3
             pango
             cairo
-            libgcc
+            # libgcc
             dbus
             ffmpeg
             fuse3
@@ -49,19 +51,41 @@
             libxkbcommon
             libyuv
             libclang
-            libv4l
+            pam
+            libgit2
+            libsodium
+            zlib
           ];
 
-          CMAKE_INCLUDE_PATH = lib.makeIncludePath [
-            libv4l
+          C_INCLUDE_PATH = lib.concatStrings [
+            # "${libclang.lib}/lib/clang/19/include:"
+            "${stdenv.cc.cc}/lib/gcc/x86_64-unknown-linux-gnu/14.2.1/include:"
+            (lib.makeIncludePath [
+              linuxHeaders
+              glibc
+              pam
+              libopus.dev
+              libvpx.dev
+              libaom.dev
+              libpulseaudio.dev
+              libva.dev
+              libvdpau.dev
+              libxkbcommon.dev
+              libyuv.out
+              libgit2.dev
+            ])
           ];
+          VCPKG_ROOT = "homeless-shelter";
+          LIBGIT2_NO_VENDOR = "1"; 
+          SODIUM_USE_PKG_CONFIG = "1";
 
           # shellHook = ''
             # alias ls=eza
             # alias find=fd
           # '';
           LD_LIBRARY_PATH = lib.makeLibraryPath (with pkgs; [
-            libv4l
+            libgit2
+            libsodium
             libclang
             xorg.libX11
             xorg.libXfixes
@@ -71,7 +95,7 @@
             gdk-pixbuf
             cairo
             xorg.libxcb
-            libgcc
+            # libgcc
             dbus
             ffmpeg
             fuse3
