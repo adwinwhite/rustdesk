@@ -250,6 +250,26 @@ impl ConnInner {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+enum MessageKind {
+    MouseEvent,
+    KeyEvent,
+    VideoFrame,
+    MultiClipboards,
+    NotCare,
+}
+
+fn msg_kind(msg: &Message) -> MessageKind {
+    use MessageKind::*;
+    match &msg.union {
+        Some(message::Union::VideoFrame(_)) => VideoFrame,
+        Some(message::Union::MultiClipboards(_)) => MultiClipboards,
+        Some(message::Union::KeyEvent(_)) => KeyEvent,
+        Some(message::Union::MouseEvent(_)) => MouseEvent,
+        _ => NotCare,
+    }
+}
+
 fn is_message_i_care(msg: &Message) -> bool {
     match &msg.union {
         Some(message::Union::VideoFrame(_)) => false,
@@ -1575,6 +1595,7 @@ impl Connection {
         self.send_to_cm(ipc::Data::Login {
             id: self.inner.id(),
             is_file_transfer: self.file_transfer.is_some(),
+            is_view_camera: self.view_camera,
             port_forward: self.port_forward_address.clone(),
             peer_id,
             name,
@@ -1804,6 +1825,8 @@ impl Connection {
     async fn on_message(&mut self, msg: Message) -> bool {
         if is_message_i_care(&msg) {
             log::debug!("received Message: {:?}", msg);
+        } else {
+            log::debug!("received Message of kind: {:?}", msg_kind(&msg));
         }
         if let Some(message::Union::LoginRequest(lr)) = msg.union {
             self.handle_login_request_without_validation(&lr).await;

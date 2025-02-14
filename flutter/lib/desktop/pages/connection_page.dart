@@ -511,7 +511,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                     text: "View Camera",
                   ),
                   const SizedBox(
-                    width: 17,
+                    width: 10,
                   ),
                   Button(onTap: onConnect, text: "Connect"),
                 ],
