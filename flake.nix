@@ -104,6 +104,7 @@
           VCPKG_ROOT = "homeless-shelter";
           LIBGIT2_NO_VENDOR = "1"; 
           SODIUM_USE_PKG_CONFIG = "1";
+          RUSTDESK_FORCED_DISPLAY_SERVER = "x11";
 
           # shellHook = ''
           # '';
