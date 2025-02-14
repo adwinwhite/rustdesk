@@ -10,7 +10,6 @@ import 'package:flutter_hbb/models/state_model.dart';
 
 import '../../consts.dart';
 import '../../common/widgets/overlay.dart';
-import '../../common/widgets/remote_input.dart';
 import '../../common.dart';
 import '../../common/widgets/dialog.dart';
 import '../../common/widgets/toolbar.dart';
@@ -304,28 +303,8 @@ class _ViewCameraPageState extends State<ViewCameraPage>
         children: [
           Container(
               color: kColorCanvas,
-              child: RawKeyFocusScope(
-                  focusNode: _rawKeyFocusNode,
-                  onFocusChange: (bool imageFocused) {
-                    debugPrint(
-                        "onFocusChange(window active:${!_isWindowBlur}) $imageFocused");
-                    // See [onWindowBlur].
-                    if (isWindows) {
-                      if (_isWindowBlur) {
-                        imageFocused = false;
-                        Future.delayed(Duration.zero, () {
-                          _rawKeyFocusNode.unfocus();
-                        });
-                      }
-                      if (imageFocused) {
-                        _ffi.inputModel.enterOrLeave(true);
-                      } else {
-                        _ffi.inputModel.enterOrLeave(false);
-                      }
-                    }
-                  },
-                  inputModel: _ffi.inputModel,
-                  child: getBodyForDesktop(context))),
+              child: getBodyForDesktop(context),
+          ),
           Stack(
             children: [
               _ffi.ffiModel.pi.isSet.isTrue &&
@@ -447,45 +426,6 @@ class _ViewCameraPageState extends State<ViewCameraPage>
     }
   }
 
-  Widget _buildRawTouchAndPointerRegion(
-    Widget child,
-    PointerEnterEventListener? onEnter,
-    PointerExitEventListener? onExit,
-  ) {
-    return RawTouchGestureDetectorRegion(
-      child: _buildRawPointerMouseRegion(child, onEnter, onExit),
-      ffi: _ffi,
-    );
-  }
-
-  Widget _buildRawPointerMouseRegion(
-    Widget child,
-    PointerEnterEventListener? onEnter,
-    PointerExitEventListener? onExit,
-  ) {
-    return RawPointerMouseRegion(
-      onEnter: onEnter,
-      onExit: onExit,
-      onPointerDown: (event) {
-        // A double check for blur status.
-        // Note: If there's an `onPointerDown` event is triggered, `_isWindowBlur` is expected being false.
-        // Sometimes the system does not send the necessary focus event to flutter. We should manually
-        // handle this inconsistent status by setting `_isWindowBlur` to false. So we can
-        // ensure the grab-key thread is running when our users are clicking the remote canvas.
-        if (_isWindowBlur) {
-          debugPrint(
-              "Unexpected status: onPointerDown is triggered while the remote window is in blur status");
-          _isWindowBlur = false;
-        }
-        if (!_rawKeyFocusNode.hasFocus) {
-          _rawKeyFocusNode.requestFocus();
-        }
-      },
-      inputModel: _ffi.inputModel,
-      child: child,
-    );
-  }
-
   Widget getBodyForDesktop(BuildContext context) {
     var paints = <Widget>[
       MouseRegion(onEnter: (evt) {
@@ -508,8 +448,6 @@ class _ViewCameraPageState extends State<ViewCameraPage>
                     cursorOverImage: _cursorOverImage,
                     keyboardEnabled: _keyboardEnabled,
                     remoteCursorMoved: _remoteCursorMoved,
-                    listenerBuilder: (child) => _buildRawTouchAndPointerRegion(
-                        child, enterView, leaveView),
                     ffi: _ffi,
                   );
                 }),
@@ -530,8 +468,7 @@ class _ViewCameraPageState extends State<ViewCameraPage>
       Positioned(
         top: 10,
         right: 10,
-        child: _buildRawTouchAndPointerRegion(
-            QualityMonitor(_ffi.qualityMonitorModel), null, null),
+        child: QualityMonitor(_ffi.qualityMonitorModel),
       ),
     );
     return Stack(
