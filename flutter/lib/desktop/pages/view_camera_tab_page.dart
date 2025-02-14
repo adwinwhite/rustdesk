@@ -9,7 +9,7 @@ import 'package:flutter_hbb/common/shared_state.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/input_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
-import 'package:flutter_hbb/desktop/pages/remote_page.dart';
+import 'package:flutter_hbb/desktop/pages/view_camera_page.dart';
 import 'package:flutter_hbb/desktop/widgets/remote_toolbar.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/desktop/widgets/material_mod_popup_menu.dart'
@@ -66,9 +66,9 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
     if (peerId != null) {
       ConnectionTypeState.init(peerId!);
       tabController.onSelected = (id) {
-        final remotePage = tabController.widget(id);
-        if (remotePage is RemotePage) {
-          final ffi = remotePage.ffi;
+        final viewCameraPage = tabController.widget(id);
+        if (viewCameraPage is ViewCameraPage) {
+          final ffi = viewCameraPage.ffi;
           bind.setCurSessionId(sessionId: ffi.sessionId);
         }
         WindowController.fromWindowId(params['windowId'])
@@ -81,7 +81,7 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
         selectedIcon: selectedIcon,
         unselectedIcon: unselectedIcon,
         onTabCloseButton: () => tabController.closeBy(peerId),
-        page: RemotePage(
+        page: ViewCameraPage(
           key: ValueKey(peerId),
           id: peerId!,
           sessionId: sessionId == null ? null : SessionID(sessionId),
@@ -192,10 +192,10 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
                 if (e.kind != ui.PointerDeviceKind.mouse) {
                   return;
                 }
-                final remotePage = tabController.state.value.tabs
+                final viewCameraPage = tabController.state.value.tabs
                     .firstWhere((tab) => tab.key == key)
-                    .page as RemotePage;
-                if (remotePage.ffi.ffiModel.pi.isSet.isTrue && e.buttons == 2) {
+                    .page as ViewCameraPage;
+                if (viewCameraPage.ffi.ffiModel.pi.isSet.isTrue && e.buttons == 2) {
                   showRightMenu(
                     (CancelFunc cancelFunc) {
                       return _tabMenuBuilder(key, cancelFunc);
@@ -239,14 +239,14 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
   Widget _tabMenuBuilder(String key, CancelFunc cancelFunc) {
     final List<MenuEntryBase<String>> menu = [];
     const EdgeInsets padding = EdgeInsets.only(left: 8.0, right: 5.0);
-    final remotePage = tabController.state.value.tabs
+    final viewCameraPage = tabController.state.value.tabs
         .firstWhere((tab) => tab.key == key)
-        .page as RemotePage;
-    final ffi = remotePage.ffi;
+        .page as ViewCameraPage;
+    final ffi = viewCameraPage.ffi;
     final pi = ffi.ffiModel.pi;
     final perms = ffi.ffiModel.permissions;
     final sessionId = ffi.sessionId;
-    final toolbarState = remotePage.toolbarState;
+    final toolbarState = viewCameraPage.toolbarState;
     menu.addAll([
       MenuEntryButton<String>(
         childBuilder: (TextStyle? style) => Obx(() => Text(
@@ -430,7 +430,7 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
         selectedIcon: selectedIcon,
         unselectedIcon: unselectedIcon,
         onTabCloseButton: () => tabController.closeBy(id),
-        page: RemotePage(
+        page: ViewCameraPage(
           key: ValueKey(id),
           id: id,
           sessionId: sessionId == null ? null : SessionID(sessionId),
@@ -473,7 +473,7 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
           .join(',');
     } else if (call.method == kWindowEventGetSessionIdList) {
       return tabController.state.value.tabs
-          .map((e) => '${e.key},${(e.page as RemotePage).ffi.sessionId}')
+          .map((e) => '${e.key},${(e.page as ViewCameraPage).ffi.sessionId}')
           .toList()
           .join(';');
     } else if (call.method == kWindowEventGetCachedSessionData) {
@@ -482,10 +482,10 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
       final id = args['id'];
       final close = args['close'];
       try {
-        final remotePage = tabController.state.value.tabs
+        final viewCameraPage = tabController.state.value.tabs
             .firstWhere((tab) => tab.key == id)
-            .page as RemotePage;
-        returnValue = remotePage.ffi.ffiModel.cachedPeerData.toString();
+            .page as ViewCameraPage;
+        returnValue = viewCameraPage.ffi.ffiModel.cachedPeerData.toString();
       } catch (e) {
         debugPrint('Failed to get cached session data: $e');
       }
@@ -494,9 +494,9 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
         tabController.closeBy(id);
       }
     } else if (call.method == kWindowEventRemoteWindowCoords) {
-      final remotePage =
-          tabController.state.value.selectedTabInfo.page as RemotePage;
-      final ffi = remotePage.ffi;
+      final viewCameraPage =
+          tabController.state.value.selectedTabInfo.page as ViewCameraPage;
+      final ffi = viewCameraPage.ffi;
       final displayRect = ffi.ffiModel.displaysRect();
       if (displayRect != null) {
         final wc = WindowController.fromWindowId(windowId());

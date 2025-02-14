@@ -2422,7 +2422,7 @@ connect(BuildContext context, String id,
             ),
           ),
         );
-      }     
+      }
     } else {
       if (isWeb) {
         Navigator.push(
