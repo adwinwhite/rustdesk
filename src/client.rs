@@ -280,6 +280,23 @@ impl Client {
             allow_err!(secure_tcp(&mut socket, key).await);
         }
 
+        let punch_hole_disabled = std::env::var("RUSTDESK_NO_PUNCH_HOLE").is_ok();
+        if punch_hole_disabled {
+            relay_server = rendezvous_server.split(':').next().unwrap().to_owned();
+            let mut conn = Self::request_relay(
+                peer,
+                relay_server.to_owned(),
+                &rendezvous_server,
+                !signed_id_pk.is_empty(),
+                key,
+                token,
+                conn_type,
+            )
+            .await?;
+            interface.update_direct(Some(false));
+            let pk = Self::secure_connection(peer, signed_id_pk, key, &mut conn).await?;
+            return Ok(((conn, false, pk), (0, rendezvous_server)));
+        }
         let start = std::time::Instant::now();
         let mut peer_addr = Config::get_any_listen_addr(true);
         let mut peer_nat_type = NatType::UNKNOWN_NAT;
