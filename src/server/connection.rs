@@ -1382,6 +1382,7 @@ impl Connection {
                         self.retina.set_displays(&displays);
                     }
                     pi.displays = displays;
+                    pi.monitor_num = display_service::all_display_info_without_cameras().unwrap().len() as _;
                     // FIXME: handle the case that camera doens't exist.
                     pi.current_display = if self.view_camera {
                         display_service::all_display_info_without_cameras().unwrap().len() as _
