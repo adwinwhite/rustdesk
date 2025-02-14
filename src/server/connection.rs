@@ -253,13 +253,10 @@ impl ConnInner {
 fn is_message_i_care(msg: &Message) -> bool {
     match &msg.union {
         Some(message::Union::VideoFrame(_)) => false,
-        Some(message::Union::Misc(misc)) => match &misc.union {
-            Some(misc::Union::SwitchDisplay(_)) => false,
-            _ => true,
-        },
         Some(message::Union::MultiClipboards(_)) => false,
         Some(message::Union::TestDelay(_)) => false,
         Some(message::Union::KeyEvent(_)) => false,
+        Some(message::Union::MouseEvent(_)) => false,
         _ => true,
     }
 }
@@ -1385,9 +1382,15 @@ impl Connection {
                         self.retina.set_displays(&displays);
                     }
                     pi.displays = displays;
-                    pi.current_display = self.display_idx as _;
+                    // FIXME: handle the case that camera doens't exist.
+                    pi.current_display = if self.view_camera {
+                        display_service::all_display_info_without_cameras().unwrap().len() as _
+                    } else {
+                        self.display_idx as _
+                    };
                     #[cfg(not(any(target_os = "android", target_os = "ios")))]
                     {
+                        // FIXME: fetch the true resolution of camera.
                         pi.resolutions = Some(SupportedResolutions {
                             resolutions: pi
                                 .displays
@@ -1441,10 +1444,12 @@ impl Connection {
     }
 
     fn try_sub_camera_services(&mut self) {
+        log::debug!("trying to subscribe camera services");
         if let Some(s) = self.server.upgrade() {
             let mut s = s.write().unwrap();
             self.auto_disconnect_timer = Self::get_auto_disconenct_timer();
             s.try_add_primary_camera_service();
+            s.add_camera_connection(self.inner.clone());
             // TODO: add microphone service.
             // s.add_connection(self.inner.clone(), &noperms);
         }

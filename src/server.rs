@@ -291,6 +291,7 @@ impl Server {
         let primary_camera_service_name =
             video_service::get_service_name(primary_camera_video_index);
         if !self.contains(&primary_camera_service_name) {
+            log::debug!("adding camera service with display index: {}", primary_camera_video_index);
             self.add_service(Box::new(video_service::new(
                 primary_camera_video_index
             )));
@@ -305,6 +306,18 @@ impl Server {
                 *display_service::PRIMARY_DISPLAY_IDX,
             )));
         }
+    }
+
+    pub fn add_camera_connection(&mut self, conn: ConnInner) {
+        let primary_camera_video_index = display_service::all_display_info_without_cameras().unwrap().len();
+        let primary_camera_service_name =
+            video_service::get_service_name(primary_camera_video_index);
+        // FIXME: assert the camera exists.
+        self.services[&primary_camera_service_name].on_subscribe(conn.clone());
+        #[cfg(target_os = "macos")]
+        self.update_enable_retina();
+        self.connections.insert(conn.id(), conn);
+        *CONN_COUNT.lock().unwrap() = self.connections.len();
     }
 
     pub fn add_connection(&mut self, conn: ConnInner, noperms: &Vec<&'static str>) {
