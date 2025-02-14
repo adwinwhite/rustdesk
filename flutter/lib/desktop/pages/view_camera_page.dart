@@ -18,7 +18,7 @@ import '../../models/model.dart';
 import '../../models/platform_model.dart';
 import '../../common/shared_state.dart';
 import '../../utils/image.dart';
-import '../widgets/remote_toolbar.dart';
+import '../widgets/view_camera_toolbar.dart';
 import '../widgets/kb_layout_type_chooser.dart';
 import '../widgets/tabbar_widget.dart';
 

@@ -33,7 +33,8 @@ import 'mobile/pages/remote_page.dart';
 import 'desktop/pages/remote_page.dart' as desktop_remote;
 import 'desktop/pages/file_manager_page.dart' as desktop_file_manager;
 import 'desktop/pages/view_camera_page.dart' as desktop_view_camera;
-import 'package:flutter_hbb/desktop/widgets/remote_toolbar.dart';
+import 'package:flutter_hbb/desktop/widgets/remote_toolbar.dart' as remote_toolbar;
+import 'package:flutter_hbb/desktop/widgets/view_camera_toolbar.dart' as view_camera_toolbar;
 import 'models/model.dart';
 import 'models/platform_model.dart';
 
@@ -2415,7 +2416,7 @@ connect(BuildContext context, String id,
             builder: (BuildContext context) => desktop_view_camera.ViewCameraPage(
               key: ValueKey(id),
               id: id,
-              toolbarState: ToolbarState(),
+              toolbarState: view_camera_toolbar.ToolbarState(),
               password: password,
               forceRelay: forceRelay,
               isSharedPassword: isSharedPassword,
@@ -2431,7 +2432,7 @@ connect(BuildContext context, String id,
             builder: (BuildContext context) => desktop_remote.RemotePage(
               key: ValueKey(id),
               id: id,
-              toolbarState: ToolbarState(),
+              toolbarState: remote_toolbar.ToolbarState(),
               password: password,
               forceRelay: forceRelay,
               isSharedPassword: isSharedPassword,

@@ -826,9 +826,11 @@ class FfiModel with ChangeNotifier {
               sessionId: sessionId, arg: kOptionTouchMode) !=
           '';
     }
+    // FIXME: handle ViewCamera ConnType independently.
     if (connType == ConnType.fileTransfer) {
       parent.target?.fileModel.onReady();
-    } else if (connType == ConnType.defaultConn) {
+    } else if (connType == ConnType.defaultConn || connType == ConnType.viewCamera) {
+      _pi.monitorNum = int.parse(evt['current_display']);
       List<Display> newDisplays = [];
       List<dynamic> displays = json.decode(evt['displays']);
       for (int i = 0; i < displays.length; ++i) {
@@ -852,13 +854,13 @@ class FfiModel with ChangeNotifier {
       }
       parent.target?.elevationModel.onPeerInfo(_pi);
     }
-    if (connType == ConnType.defaultConn) {
+    if (connType == ConnType.defaultConn || connType == ConnType.viewCamera) {
       setViewOnly(
           peerId,
           bind.sessionGetToggleOptionSync(
               sessionId: sessionId, arg: kOptionToggleViewOnly));
     }
-    if (connType == ConnType.defaultConn) {
+    if (connType == ConnType.defaultConn || connType == ConnType.viewCamera) {
       final platformAdditions = evt['platform_additions'];
       if (platformAdditions != null && platformAdditions != '') {
         try {
@@ -2721,6 +2723,11 @@ class FFI {
     if (isDesktop && connType == ConnType.defaultConn) {
       textureModel.updateCurrentDisplay(display ?? 0);
     }
+    // FIXME: separate cameras displays or shift all indices.
+    if (isDesktop && connType == ConnType.viewCamera) {
+      // FIXME: currently the default 0 is not used.
+      textureModel.updateCurrentDisplay(display ?? 0);
+    }
 
     // CAUTION: `sessionStart()` and `sessionStartWithDisplays()` are an async functions.
     // Though the stream is returned immediately, the stream may not be ready.
@@ -2969,6 +2976,7 @@ class PeerInfo with ChangeNotifier {
   int currentDisplay = 0;
   int primaryDisplay = kInvalidDisplayIndex;
   RxList<Display> displays = <Display>[].obs;
+  int monitorNum = 0;
   Features features = Features();
   List<Resolution> resolutions = [];
   Map<String, dynamic> platformAdditions = {};
