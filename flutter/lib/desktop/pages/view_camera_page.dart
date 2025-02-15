@@ -455,15 +455,15 @@ class _ViewCameraPageState extends State<ViewCameraPage>
       }))
     ];
 
-    if (!_ffi.canvasModel.cursorEmbedded) {
-      paints
-          .add(Obx(() => _showRemoteCursor.isFalse || _remoteCursorMoved.isFalse
-              ? Offstage()
-              : CursorPaint(
-                  id: widget.id,
-                  zoomCursor: _zoomCursor,
-                )));
-    }
+    // if (!_ffi.canvasModel.cursorEmbedded) {
+      // paints
+          // .add(Obx(() => _showRemoteCursor.isFalse || _remoteCursorMoved.isFalse
+              // ? Offstage()
+              // : CursorPaint(
+                  // id: widget.id,
+                  // zoomCursor: _zoomCursor,
+                // )));
+    // }
     paints.add(
       Positioned(
         top: 10,
@@ -763,66 +763,66 @@ class _ImagePaintState extends State<ImagePaint> {
   }
 }
 
-class CursorPaint extends StatelessWidget {
-  final String id;
-  final RxBool zoomCursor;
+// class CursorPaint extends StatelessWidget {
+  // final String id;
+  // final RxBool zoomCursor;
 
-  const CursorPaint({
-    Key? key,
-    required this.id,
-    required this.zoomCursor,
-  }) : super(key: key);
+  // const CursorPaint({
+    // Key? key,
+    // required this.id,
+    // required this.zoomCursor,
+  // }) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    final m = Provider.of<CursorModel>(context);
-    final c = Provider.of<CanvasModel>(context);
-    double hotx = m.hotx;
-    double hoty = m.hoty;
-    if (m.image == null) {
-      if (preDefaultCursor.image != null) {
-        hotx = preDefaultCursor.image!.width / 2;
-        hoty = preDefaultCursor.image!.height / 2;
-      }
-    }
+  // @override
+  // Widget build(BuildContext context) {
+    // final m = Provider.of<CursorModel>(context);
+    // final c = Provider.of<CanvasModel>(context);
+    // double hotx = m.hotx;
+    // double hoty = m.hoty;
+    // if (m.image == null) {
+      // if (preDefaultCursor.image != null) {
+        // hotx = preDefaultCursor.image!.width / 2;
+        // hoty = preDefaultCursor.image!.height / 2;
+      // }
+    // }
 
-    double cx = c.x;
-    double cy = c.y;
-    if (c.viewStyle.style == kRemoteViewStyleOriginal &&
-        c.scrollStyle == ScrollStyle.scrollbar) {
-      final rect = c.parent.target!.ffiModel.rect;
-      if (rect == null) {
-        // unreachable!
-        debugPrint('unreachable! The displays rect is null.');
-        return Container();
-      }
-      if (cx < 0) {
-        final imageWidth = rect.width * c.scale;
-        cx = -imageWidth * c.scrollX;
-      }
-      if (cy < 0) {
-        final imageHeight = rect.height * c.scale;
-        cy = -imageHeight * c.scrollY;
-      }
-    }
+    // double cx = c.x;
+    // double cy = c.y;
+    // if (c.viewStyle.style == kRemoteViewStyleOriginal &&
+        // c.scrollStyle == ScrollStyle.scrollbar) {
+      // final rect = c.parent.target!.ffiModel.rect;
+      // if (rect == null) {
+        // // unreachable!
+        // debugPrint('unreachable! The displays rect is null.');
+        // return Container();
+      // }
+      // if (cx < 0) {
+        // final imageWidth = rect.width * c.scale;
+        // cx = -imageWidth * c.scrollX;
+      // }
+      // if (cy < 0) {
+        // final imageHeight = rect.height * c.scale;
+        // cy = -imageHeight * c.scrollY;
+      // }
+    // }
 
-    double x = (m.x - hotx) * c.scale + cx;
-    double y = (m.y - hoty) * c.scale + cy;
-    double scale = 1.0;
-    final isViewOriginal = c.viewStyle.style == kRemoteViewStyleOriginal;
-    if (zoomCursor.value || isViewOriginal) {
-      x = m.x - hotx + cx / c.scale;
-      y = m.y - hoty + cy / c.scale;
-      scale = c.scale;
-    }
+    // double x = (m.x - hotx) * c.scale + cx;
+    // double y = (m.y - hoty) * c.scale + cy;
+    // double scale = 1.0;
+    // final isViewOriginal = c.viewStyle.style == kRemoteViewStyleOriginal;
+    // if (zoomCursor.value || isViewOriginal) {
+      // x = m.x - hotx + cx / c.scale;
+      // y = m.y - hoty + cy / c.scale;
+      // scale = c.scale;
+    // }
 
-    return CustomPaint(
-      painter: ImagePainter(
-        image: m.image ?? preDefaultCursor.image,
-        x: x,
-        y: y,
-        scale: scale,
-      ),
-    );
-  }
-}
+    // return CustomPaint(
+      // painter: ImagePainter(
+        // image: m.image ?? preDefaultCursor.image,
+        // x: x,
+        // y: y,
+        // scale: scale,
+      // ),
+    // );
+  // }
+// }
