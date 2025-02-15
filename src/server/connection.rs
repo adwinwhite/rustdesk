@@ -190,6 +190,7 @@ pub struct Connection {
     clipboard: bool,
     audio: bool,
     file: bool,
+    camera: bool,
     restart: bool,
     recording: bool,
     block_input: bool,
@@ -205,6 +206,8 @@ pub struct Connection {
     disable_clipboard: bool,
     // by peer
     disable_audio: bool,
+    // by peer
+    disable_camera: bool,
     // by peer
     #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
     enable_file_transfer: bool,
@@ -377,6 +380,7 @@ impl Connection {
             audio: Connection::permission("enable-audio"),
             // to-do: make sure is the option correct here
             file: Connection::permission(keys::OPTION_ENABLE_FILE_TRANSFER),
+            camera: Connection::permission("enable-camera"),
             restart: Connection::permission("enable-remote-restart"),
             recording: Connection::permission("enable-record-session"),
             block_input: Connection::permission("enable-block-input"),
@@ -389,6 +393,7 @@ impl Connection {
             multi_ui_session: false,
             ip: "".to_owned(),
             disable_audio: false,
+            disable_camera: false,
             #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
             enable_file_transfer: false,
             disable_clipboard: false,
@@ -443,6 +448,9 @@ impl Connection {
         #[cfg(not(target_os = "android"))]
         if !conn.keyboard {
             conn.send_permission(Permission::Keyboard, false).await;
+        }
+        if !conn.camera {
+            conn.send_permission(Permission::Camera, false).await;
         }
         if !conn.clipboard {
             conn.send_permission(Permission::Clipboard, false).await;
@@ -573,6 +581,16 @@ impl Connection {
                                         s.write().unwrap().subscribe(
                                             super::audio_service::NAME,
                                             conn.inner.clone(), conn.audio_enabled());
+                                    }
+                                }
+                            } else if &name == "camera" {
+                                conn.camera = enabled;
+                                conn.send_permission(Permission::Camera, enabled).await;
+                                if conn.authorized {
+                                    if let Some(s) = conn.server.upgrade() {
+                                        s.write().unwrap().subscribe(
+                                            &video_service::get_service_name(VideoSource::Camera, camera_display::PRIMARY_CAMERA_INDEX),
+                                            conn.inner.clone(), conn.camera_enabled());
                                     }
                                 }
                             } else if &name == "file" {
@@ -714,6 +732,10 @@ impl Connection {
                 Some((instant, value)) = rx_video.recv() => {
                     if !conn.video_ack_required {
                         video_service::notify_video_frame_fetched(id, Some(instant.into()));
+                    }
+                    let printed_msg = MessagePrinter(&value as &Message).to_string();
+                    if !printed_msg.is_empty() {
+                        log::debug!("sending Message via stream: {}", printed_msg);
                     }
                     if let Err(err) = conn.stream.send(&value as &Message).await {
                         conn.on_close(&err.to_string(), false).await;
@@ -1493,10 +1515,10 @@ impl Connection {
         if let Some(s) = self.server.upgrade() {
             let mut s = s.write().unwrap();
             self.auto_disconnect_timer = Self::get_auto_disconenct_timer();
+
+            // TODO: add microphone permission.
             s.try_add_primary_camera_display();
-            s.add_camera_connection(self.inner.clone());
-            // TODO: add microphone service.
-            // s.add_connection(self.inner.clone(), &noperms);
+            s.add_camera_connection(self.inner.clone(), self.camera_enabled());
         }
     }
 
@@ -1603,6 +1625,10 @@ impl Connection {
         self.audio && !self.disable_audio
     }
 
+    fn camera_enabled(&self) -> bool {
+        self.camera && !self.disable_camera
+    }
+
     #[cfg(any(target_os = "windows", feature = "unix-file-copy-paste"))]
     fn file_transfer_enabled(&self) -> bool {
         self.file && self.enable_file_transfer
@@ -1627,6 +1653,7 @@ impl Connection {
             keyboard: self.keyboard,
             clipboard: self.clipboard,
             audio: self.audio,
+            camera: self.camera,
             file: self.file,
             file_transfer_enabled: self.file,
             restart: self.restart,

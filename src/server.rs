@@ -310,13 +310,14 @@ impl Server {
         }
     }
 
-    pub fn add_camera_connection(&mut self, conn: ConnInner) {
-        let primary_camera_display_name =
-            video_service::get_service_name(VideoSource::Camera, camera_display::PRIMARY_CAMERA_INDEX);
-        // FIXME: assert the camera exists.
-        self.services[&primary_camera_display_name].on_subscribe(conn.clone());
-        #[cfg(target_os = "macos")]
-        self.update_enable_retina();
+    // TODO: add microphone permission.
+    pub fn add_camera_connection(&mut self, conn: ConnInner, camera_enabled: bool) {
+        if camera_enabled {
+            let primary_camera_display_name =
+                video_service::get_service_name(VideoSource::Camera, camera_display::PRIMARY_CAMERA_INDEX);
+            // FIXME: assert the camera exists.
+            self.services[&primary_camera_display_name].on_subscribe(conn.clone());
+        }
         self.connections.insert(conn.id(), conn);
         *CONN_COUNT.lock().unwrap() = self.connections.len();
     }
