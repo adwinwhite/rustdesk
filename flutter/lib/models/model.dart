@@ -830,7 +830,6 @@ class FfiModel with ChangeNotifier {
     if (connType == ConnType.fileTransfer) {
       parent.target?.fileModel.onReady();
     } else if (connType == ConnType.defaultConn || connType == ConnType.viewCamera) {
-      _pi.monitorNum = int.parse(evt['current_display']);
       List<Display> newDisplays = [];
       List<dynamic> displays = json.decode(evt['displays']);
       for (int i = 0; i < displays.length; ++i) {
@@ -2976,7 +2975,6 @@ class PeerInfo with ChangeNotifier {
   int currentDisplay = 0;
   int primaryDisplay = kInvalidDisplayIndex;
   RxList<Display> displays = <Display>[].obs;
-  int monitorNum = 0;
   Features features = Features();
   List<Resolution> resolutions = [];
   Map<String, dynamic> platformAdditions = {};

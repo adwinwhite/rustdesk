@@ -14,6 +14,7 @@ use scrap::{Frame, PixelBuffer, Pixfmt, TraitCapturer};
 // FIXME: use explicit imports.
 use super::*;
 
+pub const PRIMARY_CAMERA_INDEX: usize = 0;
 lazy_static::lazy_static! {
     static ref SYNC_CAMERA_DISPLAYS: Arc<Mutex<Vec<DisplayInfo>>> = Arc::new(Mutex::new(Vec::new()));
 }

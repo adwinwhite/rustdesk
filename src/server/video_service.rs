@@ -65,7 +65,6 @@ use std::{
     time::{self, Duration, Instant},
 };
 
-pub const NAME: &'static str = "video";
 pub const OPTION_REFRESH: &'static str = "refresh";
 
 lazy_static::lazy_static! {
@@ -133,10 +132,26 @@ impl VideoFrameController {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum VideoSource {
+    Monitor,
+    Camera,
+}
+
+impl VideoSource {
+    pub fn service_name_prefix(&self) -> &'static str {
+        match self {
+            VideoSource::Monitor => "video",
+            VideoSource::Camera => "camera",
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct VideoService {
     sp: GenericService,
     idx: usize,
+    source: VideoSource,
 }
 
 impl Deref for VideoService {
@@ -153,14 +168,15 @@ impl DerefMut for VideoService {
     }
 }
 
-pub fn get_service_name(idx: usize) -> String {
-    format!("{}{}", NAME, idx)
+pub fn get_service_name(source: VideoSource, idx: usize) -> String {
+    format!("{}{}", source.service_name_prefix(), idx)
 }
 
-pub fn new(idx: usize) -> GenericService {
+pub fn new(source: VideoSource, idx: usize) -> GenericService {
     let vs = VideoService {
-        sp: GenericService::new(get_service_name(idx), true),
+        sp: GenericService::new(get_service_name(source, idx), true),
         idx,
+        source,
     };
     GenericService::run(&vs, run);
     vs.sp
@@ -292,7 +308,7 @@ impl DerefMut for CapturerInfo {
     }
 }
 
-fn get_capturer(current: usize, portable_service_running: bool) -> ResultType<CapturerInfo> {
+fn get_capturer_monitor(current: usize, portable_service_running: bool) -> ResultType<CapturerInfo> {
     #[cfg(target_os = "linux")]
     {
         if !is_x11() {
@@ -302,47 +318,13 @@ fn get_capturer(current: usize, portable_service_running: bool) -> ResultType<Ca
 
     let mut displays = Display::all()?;
     let mut ndisplay = displays.len();
-    let cameras = camera_display::Cameras::get_sync_cameras();
-    let ncamera = cameras.len();
     if ndisplay <= current {
-        if ndisplay + ncamera <= current {
-            bail!(
-                "Failed to get display {}, displays len: {}",
-                current,
-                ndisplay
-            );
-        }
-        let camera = &cameras[current-ndisplay];
-        let capturer = camera_display::Cameras::get_capturer(current-ndisplay)?;
-        let (width,height) = (camera.width as usize,camera.height as usize);
-        let origin = (camera.x as i32,camera.y as i32);
-        let name = &camera.name;
-        let privacy_mode_id = get_privacy_mode_conn_id().unwrap_or(INVALID_PRIVACY_MODE_CONN_ID);
-        let _capturer_privacy_mode_id = privacy_mode_id;
-        ndisplay = ndisplay + ncamera;
-        log::debug!(
-            "#displays={}, current={}, origin: {:?}, width={}, height={}, cpus={}/{}, name:{}",
-            ndisplay,
+        bail!(
+            "Failed to get display {}, displays len: {}",
             current,
-            &origin,
-            width,
-            height,
-            num_cpus::get_physical(),
-            num_cpus::get(),
-            name,
+            ndisplay
         );
-        return Ok(CapturerInfo {
-            origin,
-            width,
-            height,
-            ndisplay,
-            current,
-            privacy_mode_id,
-            _capturer_privacy_mode_id: privacy_mode_id,
-            capturer,
-        });
     }
-    ndisplay = ndisplay + ncamera;
 
     let display = displays.remove(current);
 
@@ -417,6 +399,52 @@ fn get_capturer(current: usize, portable_service_running: bool) -> ResultType<Ca
     })
 }
 
+fn get_capturer_camera(current: usize) -> ResultType<CapturerInfo> {
+    let cameras = camera_display::Cameras::get_sync_cameras();
+    let ncamera = cameras.len();
+    if ncamera <= current {
+        bail!(
+            "Failed to get camera {}, cameras len: {}",
+            current,
+            ncamera, 
+        );
+    }
+    let camera = &cameras[current];
+    let capturer = camera_display::Cameras::get_capturer(current)?;
+    let (width,height) = (camera.width as usize,camera.height as usize);
+    let origin = (camera.x as i32,camera.y as i32);
+    let name = &camera.name;
+    let privacy_mode_id = get_privacy_mode_conn_id().unwrap_or(INVALID_PRIVACY_MODE_CONN_ID);
+    let _capturer_privacy_mode_id = privacy_mode_id;
+    log::debug!(
+        "#cameras={}, current={}, origin: {:?}, width={}, height={}, cpus={}/{}, name:{}",
+        ncamera,
+        current,
+        &origin,
+        width,
+        height,
+        num_cpus::get_physical(),
+        num_cpus::get(),
+        name,
+    );
+    return Ok(CapturerInfo {
+        origin,
+        width,
+        height,
+        ndisplay: ncamera,
+        current,
+        privacy_mode_id,
+        _capturer_privacy_mode_id: privacy_mode_id,
+        capturer,
+    });
+}
+fn get_capturer(source: VideoSource, current: usize, portable_service_running: bool) -> ResultType<CapturerInfo> {
+    match source {
+        VideoSource::Monitor => get_capturer_monitor(current, portable_service_running),
+        VideoSource::Camera => get_capturer_camera(current),
+    }
+}
+
 fn run(vs: VideoService) -> ResultType<()> {
     let _raii = Raii::new(vs.idx);
     // Wayland only support one video capturer for now. It is ok to call ensure_inited() here.
@@ -441,7 +469,7 @@ fn run(vs: VideoService) -> ResultType<()> {
 
     let display_idx = vs.idx;
     let sp = vs.sp;
-    let mut c = get_capturer(display_idx, last_portable_service_running)?;
+    let mut c = get_capturer(vs.source, display_idx, last_portable_service_running)?;
     #[cfg(windows)]
     if !scrap::codec::enable_directx_capture() && !c.is_gdi() {
         log::info!("disable dxgi with option, fall back to gdi");

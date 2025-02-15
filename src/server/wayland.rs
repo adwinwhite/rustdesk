@@ -1,5 +1,5 @@
 use super::*;
-use display_service::{all_display_info_without_cameras, display_to_info};
+use display_service::display_to_info;
 use hbb_common::{allow_err, platform::linux::DISTRO};
 use scrap::{is_cursor_embedded, set_map_err, Capturer, Display, Frame, TraitCapturer};
 use std::io;

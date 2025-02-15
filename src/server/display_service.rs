@@ -203,7 +203,7 @@ fn check_get_displays_changed_msg() -> Option<Message> {
             return get_displays_msg();
         }
     }
-    check_update_displays(all_display_info_with_cameras().ok()?);
+    check_update_displays(all_display_info().ok()?);
     get_displays_msg()
 }
 
@@ -216,7 +216,7 @@ pub fn check_displays_changed() -> ResultType<()> {
             return Ok(());
         }
     }
-    check_update_displays(all_display_info_with_cameras()?);
+    check_update_displays(all_display_info()?);
     Ok(())
 }
 
@@ -321,15 +321,10 @@ pub async fn update_get_sync_displays_on_login() -> ResultType<Vec<DisplayInfo>>
             return super::wayland::get_displays().await;
         }
     }
-    cfg_if::cfg_if!{
-        if #[cfg(not(windows))] {
-            let display_info = all_display_info_with_cameras()?;
-        } else {
-            let displays = display_service::try_get_displays_add_amyuni_headless()?;
-            let mut display_info = displays.iter().map(display_to_info).collect();
-            join(display_info, camera_display::Cameras::all_info()?);
-        }
-    };
+    #[cfg(not(windows))]
+    let display_info = all_display_info()?;
+    #[cfg(windows)]
+    let displays = display_service::try_get_displays_add_amyuni_headless()?;
     check_update_displays(display_info);
     Ok(SYNC_DISPLAYS.lock().unwrap().displays.clone())
 }
@@ -408,21 +403,9 @@ pub fn display_to_info(d: &Display) -> DisplayInfo {
 }
 
 
-fn all_display_info(include_camera: bool) -> ResultType<Vec<DisplayInfo>> {
+fn all_display_info() -> ResultType<Vec<DisplayInfo>> {
     let mut info = try_get_displays()?.iter().map(display_to_info).collect::<Vec<DisplayInfo>>();
-    if include_camera {
-        let cameras_info = camera_display::Cameras::all_info()?;
-        info.extend(cameras_info);
-    }
     Ok(info)
-}
-
-pub fn all_display_info_with_cameras() -> ResultType<Vec<DisplayInfo>> {
-    all_display_info(true)
-}
-
-pub fn all_display_info_without_cameras() -> ResultType<Vec<DisplayInfo>> {
-    all_display_info(false)
 }
 
 #[inline]
