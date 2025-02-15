@@ -18,7 +18,7 @@ lazy_static::lazy_static! {
     static ref SYNC_CAMERA_DISPLAYS: Arc<Mutex<Vec<DisplayInfo>>> = Arc::new(Mutex::new(Vec::new()));
 }
 
-pub struct Cameras {}
+pub struct Cameras;
 
 impl Cameras {
     // TODO: separate this into a join util and all() for cameras only.
@@ -27,8 +27,9 @@ impl Cameras {
             Ok(cameras) => {
                 let mut camera_displays = SYNC_CAMERA_DISPLAYS.lock().unwrap();
                 camera_displays.clear();
-                // FIXME: nokhwa returns duplicated camera info on linux for now.
-                // Only use one camera as temporary hack.
+                // FIXME: nokhwa returns duplicate info for one physical camera on linux for now.
+                // issue: https://github.com/l1npengtul/nokhwa/issues/171
+                // Use only one camera as a temporary hack.
                 cfg_if::cfg_if! {
                     if #[cfg(target_os = "linux")] {
                         let Some(info) = cameras.first() else {
@@ -46,6 +47,11 @@ impl Cameras {
                             online: true,
                             cursor_embedded: false,
                             scale:1.0,
+                            original_resolution: Some(Resolution {
+                                width,
+                                height,
+                                ..Default::default()
+                            }).into(),
                             ..Default::default()
                         });
                     } else {
@@ -56,13 +62,18 @@ impl Cameras {
                             let (width, height) = (resolution.width() as i32, resolution.height() as i32);
                             camera_displays.push(DisplayInfo {
                                 x,
-                                0,
+                                y: 0,
                                 name: info.human_name().clone(),
                                 width,
                                 height,
                                 online: true,
                                 cursor_embedded: false,
                                 scale:1.0,
+                                original_resolution: Some(Resolution {
+                                    width,
+                                    height,
+                                    ..Default::default()
+                                }).into(),
                                 ..Default::default()
                             });
                             x += width;
@@ -86,6 +97,17 @@ impl Cameras {
             Ok(camera) => Ok(camera),
             Err(e) => bail!("create camera{} error:  {}", index, e),
         }
+    }
+
+    pub fn get_camera_resolution(index: usize) -> ResultType<Resolution> {
+        let index = CameraIndex::Index(index as u32);
+        let camera = Self::create_camera(&index)?;
+        let resolution = camera.resolution();
+        Ok(Resolution {
+            width: resolution.width() as i32, 
+            height: resolution.height() as i32,
+            ..Default::default()
+        })
     }
 
     pub fn get_sync_cameras() -> Vec<DisplayInfo> {
