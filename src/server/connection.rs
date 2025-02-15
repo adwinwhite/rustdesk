@@ -21,6 +21,7 @@ use crate::{
 };
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::{common::DEVICE_NAME, flutter::connection_manager::start_channel};
+use camera_display::Cameras;
 use cidr_utils::cidr::IpCidr;
 #[cfg(target_os = "linux")]
 use hbb_common::platform::linux::run_cmds;
@@ -250,34 +251,37 @@ impl ConnInner {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-enum MessageKind {
-    MouseEvent,
-    KeyEvent,
-    VideoFrame,
-    MultiClipboards,
-    NotCare,
-}
+struct MessagePrinter<'a>(&'a Message);
 
-fn msg_kind(msg: &Message) -> MessageKind {
-    use MessageKind::*;
-    match &msg.union {
-        Some(message::Union::VideoFrame(_)) => VideoFrame,
-        Some(message::Union::MultiClipboards(_)) => MultiClipboards,
-        Some(message::Union::KeyEvent(_)) => KeyEvent,
-        Some(message::Union::MouseEvent(_)) => MouseEvent,
-        _ => NotCare,
-    }
-}
-
-fn is_message_i_care(msg: &Message) -> bool {
-    match &msg.union {
-        Some(message::Union::VideoFrame(_)) => false,
-        Some(message::Union::MultiClipboards(_)) => false,
-        Some(message::Union::TestDelay(_)) => false,
-        Some(message::Union::KeyEvent(_)) => false,
-        Some(message::Union::MouseEvent(_)) => false,
-        _ => true,
+impl<'a> std::fmt::Display for MessagePrinter<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let msg = self.0;
+        match &msg.union {
+            Some(message::Union::KeyEvent(_)) => {
+                write!(f, "KeyEvent")
+            }
+            Some(message::Union::MouseEvent(_)) => {
+                // write!(f, "MouseEvent")
+                Ok(())
+            }
+            Some(message::Union::VideoFrame(_)) => {
+                // write!(f, "VideoFrame")
+                Ok(())
+            }
+            Some(message::Union::AudioFrame(_)) => {
+                // write!(f, "AudioFrame")
+                Ok(())
+            }
+            Some(message::Union::MultiClipboards(_)) => {
+                write!(f, "MultiClipboards")
+            }
+            Some(message::Union::TestDelay(_)) => {
+                Ok(())
+            }
+            _ => {
+                write!(f, "{:?}", msg)
+            }
+        }
     }
 }
 
@@ -299,7 +303,6 @@ impl Subscriber for ConnInner {
             _ => false,
         };
         let tx = if tx_by_video {
-            log::debug!("sending video message");
             self.tx_video.as_mut()
         } else {
             self.tx.as_mut()
@@ -773,6 +776,10 @@ impl Connection {
                     }
 
                     let msg: &Message = &msg;
+                    let printed_msg = MessagePrinter(&msg).to_string();
+                    if !printed_msg.is_empty() {
+                        log::debug!("sending Message: {}", printed_msg);
+                    }
                     if let Err(err) = conn.stream.send(msg).await {
                         conn.on_close(&err.to_string(), false).await;
                         break;
@@ -1411,16 +1418,22 @@ impl Connection {
                     };
                     #[cfg(not(any(target_os = "android", target_os = "ios")))]
                     {
-                        // FIXME: fetch the true resolution of camera.
-                        pi.resolutions = Some(SupportedResolutions {
-                            resolutions: pi
-                                .displays
-                                .get(self.display_idx)
-                                .map(|d| crate::platform::resolutions(&d.name))
-                                .unwrap_or(vec![]),
-                            ..Default::default()
-                        })
-                        .into();
+                        // FIXME: handle the case that creating camera failed.
+                        pi.resolutions = if self.view_camera {
+                            Some(SupportedResolutions {
+                                resolutions: vec![Cameras::get_camera_resolution(0).expect("creating camera failed")],
+                                ..Default::default()
+                            })
+                        } else {
+                            Some(SupportedResolutions {
+                                resolutions: pi
+                                    .displays
+                                    .get(self.display_idx)
+                                    .map(|d| crate::platform::resolutions(&d.name))
+                                    .unwrap_or(vec![]),
+                                ..Default::default()
+                            })
+                        }.into();
                     }
                     res.set_peer_info(pi);
                     sub_service = true;
@@ -1823,11 +1836,11 @@ impl Connection {
     }
 
     async fn on_message(&mut self, msg: Message) -> bool {
-        if is_message_i_care(&msg) {
-            log::debug!("received Message: {:?}", msg);
-        } else {
-            log::debug!("received Message of kind: {:?}", msg_kind(&msg));
+        let printed_msg = MessagePrinter(&msg).to_string();
+        if !printed_msg.is_empty() {
+            log::debug!("received Message via stream: {}", printed_msg);
         }
+
         if let Some(message::Union::LoginRequest(lr)) = msg.union {
             self.handle_login_request_without_validation(&lr).await;
             if self.authorized {
@@ -3349,9 +3362,11 @@ impl Connection {
 
     #[inline]
     async fn send(&mut self, msg: Message) {
-        if is_message_i_care(&msg) {
-            log::debug!("sent Message: {:?}", msg);
+        let printed_msg = MessagePrinter(&msg).to_string();
+        if !printed_msg.is_empty() {
+            log::debug!("sending Message via stream: {}", printed_msg);
         }
+
         allow_err!(self.stream.send(&msg).await);
     }
 
