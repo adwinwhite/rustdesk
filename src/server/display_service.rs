@@ -407,27 +407,12 @@ pub fn display_to_info(d: &Display) -> DisplayInfo {
     }
 }
 
-fn join_display_info(
-    first: &mut Vec<DisplayInfo>,
-    second: Vec<DisplayInfo>,
-) {
-    let (mut x, y) = first.last().map(|last| (last.x + last.width, last.y)).unwrap_or((0, 0));
-    for info in second {
-        first.push(DisplayInfo {
-            x,
-            y,
-            ..info
-        });
-        x += info.width;
-    }
-}
-
 
 fn all_display_info(include_camera: bool) -> ResultType<Vec<DisplayInfo>> {
     let mut info = try_get_displays()?.iter().map(display_to_info).collect::<Vec<DisplayInfo>>();
     if include_camera {
         let cameras_info = camera_display::Cameras::all_info()?;
-        join_display_info(&mut info, cameras_info);
+        info.extend(cameras_info);
     }
     Ok(info)
 }
