@@ -1,0 +1,10 @@
+rust_input:
+  - "../src/flutter_ffi.rs"
+dart_output:
+  - "./lib/generated_bridge.dart"
+llvm_path:
+  # - "${lib.getLib clangStdenv.cc.cc}"
+  - "/nix/store/isxsfmzsxsh1xa3lyh66zkv8w0qziai8-clang-19.1.5-lib"
+dart_format_line_length: 80
+# llvm_compiler_opts: "-I ${lib.getLib clangStdenv.cc.cc}/lib/clang/${lib.versions.major clangStdenv.cc.version}/include -I ${clangStdenv.cc.libc_dev}/include"
+llvm_compiler_opts: "-I /nix/store/isxsfmzsxsh1xa3lyh66zkv8w0qziai8-clang-19.1.5-lib/lib/clang/19/include -I /nix/store/kj8hbqx4ds9qm9mq7hyikxyfwwg13kzj-glibc-2.40-36-dev/include"
