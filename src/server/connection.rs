@@ -253,6 +253,40 @@ impl ConnInner {
     }
 }
 
+struct MessagePrinter<'a>(&'a Message);
+
+impl<'a> std::fmt::Display for MessagePrinter<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let msg = self.0;
+        match &msg.union {
+            Some(message::Union::KeyEvent(_)) => {
+                write!(f, "KeyEvent")
+            }
+            Some(message::Union::MouseEvent(_)) => {
+                // write!(f, "MouseEvent")
+                Ok(())
+            }
+            Some(message::Union::VideoFrame(_)) => {
+                // write!(f, "VideoFrame")
+                Ok(())
+            }
+            Some(message::Union::AudioFrame(_)) => {
+                // write!(f, "AudioFrame")
+                Ok(())
+            }
+            Some(message::Union::MultiClipboards(_)) => {
+                write!(f, "MultiClipboards")
+            }
+            Some(message::Union::TestDelay(_)) => {
+                Ok(())
+            }
+            _ => {
+                write!(f, "{:?}", msg)
+            }
+        }
+    }
+}
+
 impl Subscriber for ConnInner {
     #[inline]
     fn id(&self) -> i32 {
@@ -748,6 +782,10 @@ impl Connection {
                     }
 
                     let msg: &Message = &msg;
+                    let printed_msg = MessagePrinter(&msg).to_string();
+                    if !printed_msg.is_empty() {
+                        log::debug!("sending Message: {}", printed_msg);
+                    }
                     if let Err(err) = conn.stream.send(msg).await {
                         conn.on_close(&err.to_string(), false).await;
                         break;
@@ -1813,6 +1851,11 @@ impl Connection {
     }
 
     async fn on_message(&mut self, msg: Message) -> bool {
+        let printed_msg = MessagePrinter(&msg).to_string();
+        if !printed_msg.is_empty() {
+            log::debug!("received Message via stream: {}", printed_msg);
+        }
+
         if let Some(message::Union::LoginRequest(lr)) = msg.union {
             self.handle_login_request_without_validation(&lr).await;
             if self.authorized {
@@ -3352,6 +3395,11 @@ impl Connection {
 
     #[inline]
     async fn send(&mut self, msg: Message) {
+        let printed_msg = MessagePrinter(&msg).to_string();
+        if !printed_msg.is_empty() {
+            log::debug!("sending Message via stream: {}", printed_msg);
+        }
+
         allow_err!(self.stream.send(&msg).await);
     }
 
